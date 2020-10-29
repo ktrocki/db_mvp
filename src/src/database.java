@@ -1,12 +1,10 @@
 package src;
 
-import java.sql.Array;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Hashtable;
 import org.jfree.data.xy.XYSeries;
 
 /**
@@ -16,7 +14,7 @@ import org.jfree.data.xy.XYSeries;
 public class database {
 
     //DATABASE VARS:
-    private final String url = "jdbc:postgresql://127.0.0.1:5433/erbi_col_db";
+    private final String url = "jdbc:postgresql://localhost:5432/erbi_test_database";//"jdbc:postgresql://127.0.0.1:5432/erbi_test_db";
     private final String user = "postgres";
     private final String password = "Pharyx2018";
     protected Connection conn = null;
@@ -45,28 +43,16 @@ public class database {
     protected XYSeries data_to_graph;
 
     public database() throws SQLException {
-        // String test_pod = "238";
-        // String test_date = "10142020";
         create_tables();
-        //new_exp(test_pod, test_date);
     }
 
     public void create_tables() throws SQLException {
         connect();
         String createString;
-        createString = "CREATE TABLE IF NOT EXISTS runs("
-                + "\"POD_SN\" SMALLINT NOT NULL, "
-                + "\"INOC_DATE\" INT NOT NULL, "
-                + "\"id_pk\" INT PRIMARY KEY"
-                + ");";
+        createString = "CREATE TABLE IF NOT EXISTS runs(\"POD_SN\" SMALLINT NOT NULL, \"INOC_DATE\" INT NOT NULL, \"id_pk\" INT PRIMARY KEY);";
         conn.prepareStatement(createString).execute();
         for (int i = 0; i < tables.length; i++) {
-            createString = "CREATE TABLE IF NOT EXISTS " + tables[i] + "("
-                    + "\"index\" INT NOT NULL, "
-                    + '"' + tables[i] + "\" " + dataType + " NOT NULL, "
-                    + "\"id_fk\" INT NOT NULL, "
-                    + "CONSTRAINT id_fk FOREIGN KEY(id_fk) REFERENCES runs(id_pk)"
-                    + ");";
+            createString = "CREATE TABLE IF NOT EXISTS " + tables[i] + "(\"index\" INT NOT NULL,\"" + tables[i] + "\" " + dataType + " NOT NULL, \"id_fk\" INT NOT NULL, CONSTRAINT id_fk FOREIGN KEY(id_fk) REFERENCES runs(id_pk), UNIQUE (index, \"" + tables[i] + "\"));";
             conn.prepareStatement(createString).execute();
         }
         if (!conn.isClosed()) {
@@ -74,25 +60,23 @@ public class database {
         }
     }
 
-    public void add_datapoint(String table, String pod_sn, String inoc_date, String index, String data) throws SQLException { // data[0] should be index, data[1] reading
+    public void add_datapoint(String table, String pod_sn, String inoc_date, String index, String data) throws SQLException {
         connect();
         String createString = "INSERT INTO " + table + "(\"index\", \"" + table + "\", \"id_fk\") VALUES (" + index + ", " + data + ", " + get_key(pod_sn, inoc_date) + ");";
-        // System.out.println(createString);
         conn.prepareStatement(createString).execute();
         if (!conn.isClosed()) {
             conn.close();
         }
     }
 
-    public void add_bulk_datapoint(String table, String pod_sn, String inoc_date, String index, String data) throws SQLException { // data[0] should be index, data[1] reading
+    public void add_bulk_datapoint(String table, String pod_sn, String inoc_date, String index, String data) throws SQLException {
         String createString = "INSERT INTO " + table + "(\"index\", \"" + table + "\", \"id_fk\") VALUES (" + index + ", " + data + ", " + get_key(pod_sn, inoc_date) + ");";
-        // System.out.println(createString);
         conn.prepareStatement(createString).execute();
     }
 
     public void new_exp(String pod_sn, String inoc_date) throws SQLException {
         connect();
-        String createString = "INSERT INTO runs(\"POD_SN\", \"INOC_DATE\", \"id_pk\") VALUES (" + pod_sn + ", " + inoc_date + ", " + get_key(pod_sn, inoc_date) + ");";
+        String createString = "INSERT IF NOT EXISTS INTO runs(\"POD_SN\", \"INOC_DATE\", \"id_pk\") VALUES (" + pod_sn + ", " + inoc_date + ", " + get_key(pod_sn, inoc_date) + ");";
         System.out.println(createString);
         conn.prepareStatement(createString).execute();
         if (!conn.isClosed()) {
@@ -100,12 +84,12 @@ public class database {
         }
     }
 
-    public String[][] get_runs() throws SQLException {     
+    public String[][] get_runs() throws SQLException {
         connect();
         String queryString = "SELECT DISTINCT \"POD_SN\", \"INOC_DATE\" FROM runs ORDER BY \"POD_SN\" ASC";
         ResultSet query_result = conn.prepareStatement(queryString).executeQuery();
         ArrayList<Integer> pod_sn = new ArrayList<Integer>();
-         ArrayList<Integer> pod_inoc = new ArrayList<Integer>();
+        ArrayList<Integer> pod_inoc = new ArrayList<Integer>();
         while (query_result.next()) {
             pod_sn.add(query_result.getInt(1));
             pod_inoc.add(query_result.getInt(2));
@@ -115,7 +99,7 @@ public class database {
             results[i][0] = String.valueOf(pod_sn.get(i));
             results[i][1] = String.valueOf(pod_inoc.get(i));
         }
-        
+
         if (!conn.isClosed()) {
             conn.close();
         }
@@ -124,8 +108,7 @@ public class database {
 
     public XYSeries get_data(String pod_sn, String inoc_date, String table) throws SQLException {
         connect();
-        System.out.println("HERE");
-        data_to_graph = new XYSeries("Main Data");
+        data_to_graph = new XYSeries(table);
         String queryString = "SELECT * FROM " + table + " WHERE id_fk = " + get_key(pod_sn, inoc_date) + " ORDER BY index ASC;";
         System.out.println(queryString);
         ResultSet query_result = conn.prepareStatement(queryString).executeQuery();
