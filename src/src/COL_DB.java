@@ -4,12 +4,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import org.jfree.data.xy.XYSeries;
 
 /**
  *
@@ -22,15 +22,15 @@ public class COL_DB extends JFrame {
     protected JComboBox graph_select;
 
     public COL_DB() throws SQLException, IOException {
+       // db = new database();
         show_app();
-        //new txt_to_db(db);
     }
 
     public void show_app() throws SQLException {
         setSize(1200, 900);
         setLocation(100, 50);
         setLayout(null);
-        setTitle("Burn-in Analysis");
+        setTitle("DB MVP");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setVisible(true);
 
@@ -62,11 +62,15 @@ public class COL_DB extends JFrame {
         graph_select.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (graph != null) {
+                 long timeBefore = System.currentTimeMillis();
+                 if (graph != null) {
                     graph.hide_chart();
                 }
                 try {
+                    XYSeries d = db.get_data(pod_nums[pod_select.getSelectedIndex()], pod_inoc[pod_select.getSelectedIndex()], db.tables[graph_select.getSelectedIndex()]);
                     graph = new graph(chart, db.get_data(pod_nums[pod_select.getSelectedIndex()], pod_inoc[pod_select.getSelectedIndex()], db.tables[graph_select.getSelectedIndex()]), db.tables[graph_select.getSelectedIndex()], "READING");
+                 long timeAfter = System.currentTimeMillis();
+                    System.out.println(timeAfter - timeBefore);
                 } catch (SQLException ex) {
                     Logger.getLogger(COL_DB.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -76,14 +80,18 @@ public class COL_DB extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
+                    long timeBefore = System.currentTimeMillis();
                     if (graph != null) {
                         graph.hide_chart();
                     }
 
                     if (graph_select.getSelectedIndex() >= 0) {
+                        XYSeries d = db.get_data(pod_nums[pod_select.getSelectedIndex()], pod_inoc[pod_select.getSelectedIndex()], db.tables[graph_select.getSelectedIndex()]);
+         
                         graph = new graph(chart, db.get_data(pod_nums[pod_select.getSelectedIndex()], pod_inoc[pod_select.getSelectedIndex()], db.tables[graph_select.getSelectedIndex()]), db.tables[graph_select.getSelectedIndex()], "READING");
                     }
-
+                    long timeAfter = System.currentTimeMillis();
+                    System.out.println(timeAfter - timeBefore);
                 } catch (SQLException ex) {
                     Logger.getLogger(COL_DB.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -92,7 +100,7 @@ public class COL_DB extends JFrame {
         add(pod_select);
         add(graph_select);
         pod_select.setSelectedIndex(0);
-
+         
     }
 
     public static void main(String[] args) throws SQLException, IOException {
